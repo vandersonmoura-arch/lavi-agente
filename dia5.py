@@ -7,7 +7,7 @@ load_dotenv()
 chave = os.environ.get("GEMINI_API_KEY")
 cliente = genai.Client(api_key=chave)
 SYSTEM_PROMPT = """
-Voê é o atendente da Barbearia LaVi.
+Você é o atendente da Barbearia LaVi.
 
 INFORMAÇÕES DA BARBEARIA:
 Horário: Segunda a sábado: 9h às 19h
@@ -42,16 +42,14 @@ while True:
     if pergunta == "sair":
         print(f"Ate logo, {nome}!")
         break
-
     historico.append(f"Cliente: {pergunta}")
 
-    contexto = SYSTEM_PROMPT + "\n\nHistorico da conversa:\n" + "\n".join(historico)
+contexto = SYSTEM_PROMPT + "\n\nHistorico da conversa:\n" + "\n".join(historico)
 
-    resposta = cliente.models.generate_content(
+resposta = cliente.models.generate_content(
         model="gemini-3.5-flash-lite",
         contents=contexto
     )
+historico.append(f"Atendente: {resposta.text}")
 
-    historico.append(f"Atendente: {resposta.text}")
-
-    print(f"\n{resposta.text}")
+print(f"\n{resposta.text}")
