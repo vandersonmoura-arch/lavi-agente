@@ -2,11 +2,12 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from google import genai
 from dotenv import load_dotenv
+from pathlib import Path
 import os
 import logging
 
 
-from pathlib import Path
+
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 app = FastAPI()
@@ -39,6 +40,7 @@ REGRAS:
 - Nunca invente informações
 - Respostas curtas e diretas
 """
+historicos = {}    
 
 class Mensagem(BaseModel):
     nome: str
@@ -52,13 +54,25 @@ def inicio():
 def conversar(mensagem: Mensagem):
     logger.info(f"Mensagem recebida de {mensagem.nome}: {mensagem.texto}")
 
-    contexto = f"{SYSTEM_PROMPT}\n\nCliente {mensagem.nome} perguntou: {mensagem.texto}"
+    if mensagem.nome not in historicos:
+        historicos[mensagem.nome] = []
+
+    historico = historicos[mensagem.nome]
+    historico.append(f"Cliente: {mensagem.texto}")
+
+    contexto = (
+        SYSTEM_PROMPT
+        + f"\n\nNome do cliente: {mensagem.nome}"
+        + "\n\nHistorico da conversa:\n"
+        + "\n".join(historico)
+    )
 
     try:
         resposta = cliente.models.generate_content(
-           model="gemini-3.5-flash-lite",
+            model="gemini-3.5-flash-lite",
             contents=contexto
         )
+        historico.append(f"Atendente: {resposta.text}")
         logger.info(f"Resposta enviada para {mensagem.nome}")
         return {
             "usuario": mensagem.nome,
@@ -67,6 +81,7 @@ def conversar(mensagem: Mensagem):
 
     except Exception as erro:
         logger.error(f"Falha ao consultar a IA: {erro}")
+        historico.pop()
         return {
             "usuario": mensagem.nome,
             "resposta": "Estamos com instabilidade no momento. Tente novamente em alguns minutos."
